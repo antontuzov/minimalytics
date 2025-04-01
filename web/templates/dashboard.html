@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 40px;
+        }
+        h3 {
+            color: #34495e;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Analytics Dashboard</h1>
+        
+        <div class="grid">
+            <div class="chart-container">
+                <h3>Daily Traffic Overview</h3>
+                <canvas id="dailyChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Unique vs Total Visitors</h3>
+                <canvas id="uniqueVisitsChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Top Pages</h3>
+                <canvas id="topPagesChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Traffic Sources</h3>
+                <canvas id="referrerChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Device Distribution</h3>
+                <canvas id="deviceChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Browser Usage</h3>
+                <canvas id="browserChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Helper function to create charts
+        function createChart(elementId, config) {
+            return new Chart(document.getElementById(elementId), {
+                ...config,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    ...config.options
+                }
+            });
+        }
+
+        // Daily Traffic Chart
+        fetch('/api/stats/daily')
+            .then(r => r.json())
+            .then(data => {
+                createChart('dailyChart', {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.day),
+                        datasets: [{
+                            label: 'Page Views',
+                            data: data.map(d => d.count),
+                            borderColor: '#3498db',
+                            tension: 0.2
+                        }]
+                    }
+                });
+            });
+
+        // Unique vs Total Visitors
+        Promise.all([
+            fetch('/api/stats/daily').then(r => r.json()),
+            fetch('/api/stats/unique-visits').then(r => r.json())
+        ]).then(([total, unique]) => {
+            createChart('uniqueVisitsChart', {
+                type: 'bar',
+                data: {
+                    labels: unique.map(d => d.day),
+                    datasets: [{
+                        label: 'Unique Visitors',
+                        data: unique.map(d => d.count),
+                        backgroundColor: '#2ecc71'
+                    },
+                    {
+                        label: 'Total Views',
+                        data: total.map(d => d.count),
+                        backgroundColor: '#e67e22'
+                    }]
+                },
+                options: {
+                    scales: { x: { stacked: true } }
+                }
+            });
+        });
+
+        // Top Pages
+        fetch('/api/stats/top-pages')
+            .then(r => r.json())
+            .then(data => {
+                createChart('topPagesChart', {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.path),
+                        datasets: [{
+                            label: 'Views',
+                            data: data.map(d => d.count),
+                            backgroundColor: '#9b59b6'
+                        }]
+                    }
+                });
+            });
+
+        // Referrers
+        fetch('/api/stats/referrers')
+            .then(r => r.json())
+            .then(data => {
+                createChart('referrerChart', {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.map(d => d.referrer),
+                        datasets: [{
+                            data: data.map(d => d.count),
+                            backgroundColor: [
+                                '#e74c3c', '#1abc9c', '#f1c40f', 
+                                '#34495e', '#7f8c8d'
+                            ]
+                        }]
+                    }
+                });
+            });
+
+        // Devices
+        fetch('/api/stats/devices')
+            .then(r => r.json())
+            .then(data => {
+                createChart('deviceChart', {
+                    type: 'polarArea',
+                    data: {
+                        labels: data.map(d => d.device),
+                        datasets: [{
+                            data: data.map(d => d.count),
+                            backgroundColor: [
+                                '#2980b9', '#27ae60', '#8e44ad'
+                            ]
+                        }]
+                    }
+                });
+            });
+
+        // Browsers
+        fetch('/api/stats/browsers')
+            .then(r => r.json())
+            .then(data => {
+                createChart('browserChart', {
+                    type: 'pie',
+                    data: {
+                        labels: data.map(d => d.browser),
+                        datasets: [{
+                            data: data.map(d => d.count),
+                            backgroundColor: [
+                                '#e67e22', '#2ecc71', '#3498db',
+                                '#f1c40f', '#e74c3c'
+                            ]
+                        }]
+                    }
+                });
+            });
+    </script>
+</body>
+</html>
